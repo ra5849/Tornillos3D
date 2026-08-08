@@ -72,11 +72,18 @@
         profiles.list = profiles.list.filter(function (u) { return u && u.name; });
       }
     } catch (e) {}
+    /* Limpieza: 'Jugador 1' era un fantasma creado por versiones antiguas sin
+       haberlo elegido. Se borra salvo que de verdad tenga progreso. */
+    profiles.list = profiles.list.filter(function (u) {
+      if (u.name !== 'Jugador 1') return true;
+      var hasStars = u.stars && Object.keys(u.stars).length > 0;
+      return hasStars || (u.unlocked | 0) > 1 || (u.coins | 0) > 0;
+    });
     if (!profiles.list.length) {
-      profiles.list = [{ name: 'Jugador 1', unlocked: 1, coins: 0, stars: {} }];
-      profiles.active = 'Jugador 1';
-    }
-    if (!profiles.list.some(function (u) { return u.name === profiles.active; })) {
+      /* sin usuarios creados: nada de falsos jugadores por defecto */
+      profiles.list = [];
+      profiles.active = '';
+    } else if (!profiles.list.some(function (u) { return u.name === profiles.active; })) {
       profiles.active = profiles.list[0].name;
     }
   }
@@ -84,16 +91,14 @@
     try { localStorage.setItem(PROF_KEY, JSON.stringify(profiles)); } catch (e) {}
   }
   function saveState() { persistProfiles(); }
-  /* devuelve la ficha del jugador activo (la crea si falta) */
+  /* devuelve la ficha del jugador activo (null si no hay ninguno creado) */
   function activeUser() {
+    if (!profiles.active) return null;
     var u = null;
     for (var i = 0; i < profiles.list.length; i++) {
       if (profiles.list[i].name === profiles.active) u = profiles.list[i];
     }
-    if (!u) {
-      u = { name: profiles.active, unlocked: 1, coins: 0, stars: {} };
-      profiles.list.push(u);
-    }
+    if (!u) return null;
     u.unlocked = Math.max(1, Math.min(LEVEL_MAX, u.unlocked | 0));
     u.coins = Math.max(0, u.coins | 0);
     u.stars = u.stars || {};
@@ -125,9 +130,8 @@
     return name;
   }
   function deleteUserByName(name) {
-    if (profiles.list.length <= 1) { toast('Debe quedar al menos un jugador', 'warn'); return; }
     profiles.list = profiles.list.filter(function (u) { return u.name !== name; });
-    if (profiles.active === name) profiles.active = profiles.list[0].name;
+    if (profiles.active === name) profiles.active = profiles.list.length ? profiles.list[0].name : '';
     refreshUserUI();
     toast('Jugador eliminado', 'warn');
   }
@@ -135,8 +139,17 @@
   function renderUserList() {
     var list = $('userList');
     if (!list) return;
-    $('userChip').textContent = profiles.active;
+    $('userChip').textContent = profiles.active || 'Sin jugador';
     list.innerHTML = '';
+    if (!profiles.list.length) {
+      var hint = document.createElement('div');
+      hint.className = 'userRow hint';
+      hint.textContent = 'No hay jugadores creados. ¡Crea el primero!';
+      list.appendChild(hint);
+      $('userNew').classList.remove('hidden');
+      return;
+    }
+    $('userNew').classList.add('hidden');
     profiles.list.forEach(function (u) {
       var totalStars = 0;
       for (var k in u.stars) totalStars += u.stars[k] | 0;
@@ -151,15 +164,13 @@
         return function () { SJaudio.sfx.click(); setActiveUser(nm); };
       })(u.name);
       row.appendChild(bSel);
-      if (profiles.list.length > 1) {
-        var bDel = document.createElement('button');
-        bDel.className = 'bigBtn ghost del';
-        bDel.textContent = 'Eliminar';
-        bDel.onclick = (function (nm) {
-          return function () { SJaudio.sfx.click(); deleteUserByName(nm); };
-        })(u.name);
-        row.appendChild(bDel);
-      }
+      var bDel = document.createElement('button');
+      bDel.className = 'bigBtn ghost del';
+      bDel.textContent = 'Eliminar';
+      bDel.onclick = (function (nm) {
+        return function () { SJaudio.sfx.click(); deleteUserByName(nm); };
+      })(u.name);
+      row.appendChild(bDel);
       list.appendChild(row);
     });
   }
@@ -1163,6 +1174,7 @@ function addToBin(sc) {
 
   /* ================== HUD / UI ================== */
   function updateHUD() {
+    if (!save) { $('coinCount').textContent = '—'; return; }
     $('coinCount').textContent = save.coins;
     var hs = $('hearts').children;
     for (var i = 0; i < hs.length; i++) {
@@ -1385,12 +1397,23 @@ function addToBin(sc) {
   }
 
   function wireUI() {
+    var requireUser = function () {
+      renderUserList();
+      $('userNew').classList.remove('hidden');
+      $('userList').classList.remove('hidden');
+      toast('Crea un jugador primero', 'warn');
+      SJaudio.sfx.error();
+      return false;
+    };
     $('btnPlay').addEventListener('click', function () {
       SJaudio.init(); SJaudio.sfx.start();
+      if (!save) { requireUser(); return; }
       enterLevel(save.unlocked);
     });
     $('btnLevels').addEventListener('click', function () {
-      SJaudio.sfx.click(); buildGrid(); showScreen('levels');
+      SJaudio.sfx.click();
+      if (!save) { requireUser(); return; }
+      buildGrid(); showScreen('levels');
     });
     $('btnAbout').addEventListener('click', function () { SJaudio.sfx.click(); showScreen('about'); });
     $('btnBackMenu').addEventListener('click', function () { SJaudio.sfx.click(); showScreen('menu'); });
@@ -1408,7 +1431,7 @@ function addToBin(sc) {
       SJaudio.sfx.click();
       renderUserList();
       $('userList').classList.toggle('hidden');
-      $('userNew').classList.toggle('hidden');
+      if (profiles.list.length) $('userNew').classList.add('hidden');
     });
     $('btnAddUser').addEventListener('click', function () {
       var inp = $('userNameInput');
