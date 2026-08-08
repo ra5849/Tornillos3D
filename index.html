@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>Tornillos 3D: Desatornilla y Ordena</title>
+<link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+
+<div id="game">
+  <canvas id="c"></canvas>
+
+  <div id="overlay">
+    <div id="hud">
+      <div id="hudLeft">
+        <div id="levelLabel">Nivel 1</div>
+        <div id="hearts"><span class="heart"></span><span class="heart"></span><span class="heart"></span></div>
+        <div id="remainCount"></div>
+        <div id="colorCount"></div>
+      </div>
+      <div id="hudCenter">
+        <button class="toolBtn" id="btnHammer" title="Martillo: quita cualquier tornillo">
+          <span class="toolIcon">&#9874;</span><span class="toolName uiHide">Martillo</span><span class="toolCost">15</span>
+        </button>
+        <button class="toolBtn" id="btnBox" title="Caja extra: amplía una caja de color">
+          <span class="toolIcon">&#9635;</span><span class="toolName uiHide">Caja extra</span><span class="toolCost">25</span>
+        </button>
+        <button class="toolBtn" id="btnHint" title="Pista: resalta un tornillo válido">
+          <span class="toolIcon light" id="hintIco">&#9733;</span><span class="toolName uiHide">Pista</span><span class="toolCost">5</span>
+        </button>
+        <button class="toolBtn" id="btnUndo" title="Deshacer último tornillo">
+          <span class="toolIcon">&#8630;</span><span class="toolName uiHide">Deshacer</span><span class="toolCost">5</span>
+        </button>
+        <button class="toolBtn" id="btnRestart" title="Reiniciar nivel">
+          <span class="toolIcon">&#8635;</span><span class="toolName uiHide">Reiniciar</span><span class="toolCost">0</span>
+        </button>
+      </div>
+      <div id="hudRight">
+        <div id="coinBox"><span id="coinCount">0</span></div>
+        <button id="btnMenu">Menu</button>
+      </div>
+    </div>
+
+    <div id="toastBox"></div>
+  </div>
+
+  <!-- MENU PRINCIPAL -->
+  <div class="screen" id="menuScreen">
+    <div class="panel">
+      <h1>TORNILLOS <span>3D</span></h1>
+      <p class="tagline">Desatornilla, ordena por color y desarma las figuras</p>
+      <div class="profileBox">
+        <button class="bigBtn ghost" id="btnSelectUser">Jugador: <span id="userChip">Jugador 1</span></button>
+        <div class="userList hidden" id="userList"></div>
+        <div class="userNew hidden" id="userNew">
+          <input id="userNameInput" type="text" maxlength="14" placeholder="Nombre del nuevo jugador" />
+          <button class="bigBtn ghost" id="btnAddUser">Crear jugador</button>
+        </div>
+      </div>
+      <button class="bigBtn" id="btnPlay">Jugar</button>
+      <button class="bigBtn ghost" id="btnLevels">Niveles</button>
+      <button class="bigBtn ghost" id="btnAbout">Como se juega</button>
+      <p class="noAds">100% gratis. Sin anuncios.</p>
+    </div>
+  </div>
+
+  <!-- NIVELES -->
+  <div class="screen" id="levelsScreen">
+    <div class="panel">
+      <h2>Niveles</h2>
+      <div id="grid"></div>
+      <button class="bigBtn ghost" id="btnBackMenu">Volver</button>
+    </div>
+  </div>
+
+  <!-- COMO SE JUEGA -->
+  <div class="screen" id="aboutScreen">
+    <div class="panel wide">
+      <h2>Como se juega</h2>
+      <ul>
+        <li>Toca un <b>tornillo</b> para desenroscarlo: gira y cae a la <b>caja de su color</b>.</li>
+        <li>Cada cubo muestra cuántos tornillos recibirá (<b>x/y</b>) y nunca espera tornillos que no existen: si solo queda uno, el cubo marca <b>0/1</b>.</li>
+        <li>Solo puedes quitar los colores con <b>cubo abierto</b>. Hay menos cubos que colores: completa cubos para desbloquear los demás.</li>
+        <li>Arrastra para <b>rotar</b> la figura y ver los otros lados.</li>
+        <li>Rueda del raton o pellizco para <b>zoom</b>.</li>
+        <li>Cuando saques todos los tornillos de un <b>tablón</b>, este salta y se desarma.</li>
+        <li>Consigue <b>monedas</b> por cada tornillo y usalas en herramientas: de la barra.</li>
+        <li>Completa el nivel sin perder las 3 vidas para ganar.</li>
+      </ul>
+      <button class="bigBtn ghost" id="btnBackAbout">Volver</button>
+    </div>
+  </div>
+
+  <!-- RESULTADO -->
+  <div class="screen" id="resultScreen">
+    <div class="panel">
+      <h2 id="resultTitle">Nivel completado</h2>
+      <div id="stars" class="stars"><span></span><span></span><span></span></div>
+      <p id="resultText"></p>
+      <div id="resultButtons"></div>
+    </div>
+  </div>
+</div>
+
+<script src="libs/three.min.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/effects.js"></script>
+<script src="js/figure.js"></script>
+<script src="js/levels.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
