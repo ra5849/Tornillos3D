@@ -6,8 +6,8 @@
    (las obtienes en supabase.com -> tu proyecto -> Settings ->
    API).
    ============================================================ */
-var SUPA_URL = 'PEGA_AQUI_LA_URL_DEL_PROYECTO';   /* ej. https://abcd1234.supabase.co */
-var SUPA_ANON = 'PEGA_AQUI_LA_CLAVE_ANON_PUBLICA';
+var SUPA_URL = 'https://mczrbagzyrzhfqfcvgru.supabase.co';
+var SUPA_ANON = 'sb_publishable_RCHhXGSN0-TGOhp1jEPrWA_baRwfg4-';
 
 /* tabla: profiles (crearla en el SQL editor de Supabase)
    create table public.profiles (
