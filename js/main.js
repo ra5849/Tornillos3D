@@ -89,6 +89,50 @@
   }
   function persistProfiles() {
     try { localStorage.setItem(PROF_KEY, JSON.stringify(profiles)); } catch (e) {}
+    syncCloudSave();
+  }
+  /* sube los perfiles locales a la nube (Supabase) para continuar la partida
+     en otro navegador/dispositivo. Silencioso: si la nube falla, no pasa nada */
+  function syncCloudSave() {
+    if (!window.SJcloud || !SJcloud.enabled) return;
+    for (var i = 0; i < profiles.list.length; i++) {
+      (function (u) {
+        SJcloud.upsert(u, function () {});
+      })(profiles.list[i]);
+    }
+  }
+  /* fusiona lo guardado en la nube con lo local: gana la versión más nueva.
+     Si un perfil no existe localmente (creado en otro dispositivo), se adopta */
+  function mergeCloudProfiles() {
+    if (!window.SJcloud || !SJcloud.enabled) return;
+    SJcloud.fetchAll(function (rows) {
+      if (!rows || !rows.length) return;
+      var changed = false;
+      rows.forEach(function (r) {
+        var loc = null;
+        for (var i = 0; i < profiles.list.length; i++) {
+          if (profiles.list[i].name === r.name) { loc = profiles.list[i]; break; }
+        }
+        if (!loc) {
+          if (r.name === 'Jugador 1' && !(r.stars && Object.keys(r.stars).length) && (r.unlocked | 0) <= 1 && (r.coins | 0) <= 0) return;
+          loc = { name: r.name, unlocked: r.unlocked | 0, coins: r.coins | 0, stars: r.stars || {}, cloudT: +new Date(r.updated_at) };
+          profiles.list.push(loc);
+          changed = true;
+        } else {
+          var cloudT = +new Date(r.updated_at);
+          var localT = loc.cloudT || 0;
+          if (cloudT > localT) {
+            loc.unlocked = r.unlocked | 0; loc.coins = r.coins | 0; loc.stars = r.stars || {};
+            loc.cloudT = cloudT;
+            changed = true;
+          }
+        }
+      });
+      if (changed) {
+        persistProfiles();
+        refreshUserUI();
+      }
+    });
   }
   function saveState() { persistProfiles(); }
   /* devuelve la ficha del jugador activo (null si no hay ninguno creado) */
@@ -131,6 +175,7 @@
   }
   function deleteUserByName(name) {
     profiles.list = profiles.list.filter(function (u) { return u.name !== name; });
+    if (window.SJcloud && SJcloud.enabled) SJcloud.remove(name, function () {});
     if (profiles.active === name) profiles.active = profiles.list.length ? profiles.list[0].name : '';
     refreshUserUI();
     toast('Jugador eliminado', 'warn');
@@ -1458,6 +1503,7 @@ function addToBin(sc) {
     renderUserList();
     updateHUD();
     showScreen('menu');
+    mergeCloudProfiles();
     animate();
   }
 
