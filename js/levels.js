@@ -11,16 +11,32 @@
     { hex: 0x2bb8b0, name: 'Cian' }
   ];
 
-  /* 500 niveles: cada uno igual o más difícil que el anterior.
-     - más colores (hasta 8): más cola esperando al completar cubos
-     - más tornillos por color (hasta 12): más trabajo por cubo
-     - más densidad de tornillos (hasta +60% agujeros en las tablas) */
+  /* 500 niveles, cada uno con SU PROPIA SEMILLA: figura, tema, rotacion,
+     colores y reparto de tornillos son únicos (un nivel nunca se repite).
+     La dificultad sube de forma continua hasta el nivel 500:
+     - mas colores (3..8) y mas tornillos/color (4..14): mas cola esperando
+     - mas densidad de agujeros (x1.0..x2.0): tablas mas llenas de tornillos
+     - tema y forma aleatorios por nivel: nunca dos niveles iguales */
   var MAX_LEVEL = 500;
 
-  function randInt(n) { return Math.floor(Math.random() * n); }
-  function shuffle(a) {
+  /* RNG determinista xorshift32: la misma semilla produce siempre el mismo
+     nivel, pero cada nivel tiene una semilla distinta -> todos diferentes */
+  function makeRng(seed) {
+    var s = seed >>> 0;
+    function next() {
+      s ^= s << 13; s >>>= 0;
+      s ^= s >>> 17; s >>>= 0;
+      s ^= s << 5; s >>>= 0;
+      return s / 4294967296;
+    }
+    return next;
+  }
+  function rngForLevel(num) {
+    return makeRng(num * 1013904223 + 1664525);
+  }
+  function shuffle(a, rng) {
     for (var i = a.length - 1; i > 0; i--) {
-      var j = randInt(i + 1);
+      var j = Math.floor(rng() * (i + 1));
       var t = a[i]; a[i] = a[j]; a[j] = t;
     }
     return a;
@@ -30,22 +46,23 @@
     return Math.min(8, 3 + Math.floor((n - 1) / 40));
   }
   function perColorForLevel(n) {
-    return Math.min(12, 4 + Math.floor((n - 1) / 60));
+    return Math.min(14, 4 + Math.floor((n - 1) / 40));
   }
-  /* densidad de agujeros: 1.0 al inicio, +10% cada 30 niveles, max 1.6 */
+  /* densidad de agujeros: 1.0 al inicio, subiendo hasta x2.0 en el nivel 500 */
   function densityForLevel(n) {
-    return Math.min(1.6, 1 + (n - 1) / 300);
+    return Math.min(2.0, 1 + (n - 1) / 500);
   }
 
   function buildLevel(num) {
     num = Math.max(1, Math.min(MAX_LEVEL, num));
+    var rng = rngForLevel(num);
     var themes = SJfigure.themes;
-    var theme = themes[(num - 1) % themes.length];
+    var theme = themes[Math.floor(rng() * themes.length)];
 
     var colorsN = colorsForLevel(num);
     var perColor = perColorForLevel(num);
 
-    var fig = SJfigure.build(theme, densityForLevel(num));
+    var fig = SJfigure.build(theme, densityForLevel(num), rng);
 
     // ajuste si no bastan los puntos (mantiene solucionable)
     var total = colorsN * perColor;
@@ -54,8 +71,8 @@
       total = colorsN * perColor;
     }
 
-    // paleta rotada segun nivel para variedad
-    var offset = ((num - 1) * 3) % PALETTE.length;
+    // paleta rotada segun la semilla del nivel para variedad
+    var offset = Math.floor(rng() * PALETTE.length);
     var palette = [];
     for (var i = 0; i < colorsN; i++) palette.push(PALETTE[(offset + i) % PALETTE.length]);
 
@@ -68,10 +85,9 @@
     }
     var rest = [];
     for (var s = 0; s < fig.slots.length; s++) if (priority.indexOf(s) === -1) rest.push(s);
+    shuffle(priority, rng);
+    shuffle(rest, rng);
     var indices = priority.concat(rest);
-    shuffle(priority);
-    shuffle(rest);
-    indices = priority.concat(rest);
 
     var needByColor = {};
     for (var ci2 = 0; ci2 < colorsN; ci2++) needByColor[ci2] = perColor;
@@ -82,7 +98,7 @@
       var cand = [];
       for (var c = 0; c < colorsN; c++) if (needByColor[c] > 0) cand.push(c);
       if (!cand.length) break;
-      var pick = cand[randInt(cand.length)];
+      var pick = cand[Math.floor(rng() * cand.length)];
       needByColor[pick]--;
       specs[indices[k]] = pick;
       placed++;

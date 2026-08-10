@@ -41,11 +41,14 @@
   var THEMES = [];
   function defineTheme(name, builder) { THEMES.push({ name: name, builder: builder }); }
 
-  function build(themeName, density) {
+  function build(themeName, density, rng) {
     var slots = [];
     var plates = [];
     var group = new THREE.Group();
     var dense = (typeof density === 'number' && density > 0) ? density : 1;
+    /* rng opcional (semilla del nivel): sin el, Math.random (comportamiento antiguo) */
+    var R = (typeof rng === 'function') ? rng : Math.random;
+    var rnd = function (min, max) { return min + R() * (max - min); };
 
     function slot(x, y, z, nx, ny, nz, plateId) {
       var s = { p: new THREE.Vector3(x, y, z), n: new THREE.Vector3(nx, ny, nz).normalize(), hiddenBy: null };
@@ -76,18 +79,21 @@
        Los tornillos van en la cara de la placa que mira al frente (+Z local).
     */
     function addPlank(c) {
-      var w = c.w || 3, h = c.h || 3, t = c.t || 0.18;
+      var w = (c.w || 3) * rnd(0.92, 1.08), h = (c.h || 3) * rnd(0.92, 1.08), t = c.t || 0.18;
       var q = new THREE.Quaternion();
       if (c.q) q.copy(c.q);
-      else q.setFromEuler(new THREE.Euler(c.rx || 0, c.ry || 0, c.rz || 0, 'YXZ'));
+      else q.setFromEuler(new THREE.Euler(
+        (c.rx || 0) + rnd(-0.03, 0.03),
+        (c.ry || 0) + rnd(-0.03, 0.03),
+        (c.rz || 0) + rnd(-0.03, 0.03), 'YXZ'));
       var mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, t), c.m || mat(0x9a8a6a));
       mesh.position.set(c.x || 0, c.y || 0, c.z || 0);
       mesh.quaternion.copy(q);
       mesh.castShadow = true;
       group.add(mesh);
 
-      var cols = c.cols ? Math.max(2, Math.min(6, Math.round(c.cols * dense))) : 3;
-      var rows = c.rows ? Math.max(2, Math.min(7, Math.round(c.rows * dense))) : 3;
+      var cols = c.cols ? Math.max(2, Math.min(6, Math.round(c.cols * dense * rnd(0.85, 1.15)))) : 3;
+      var rows = c.rows ? Math.max(2, Math.min(7, Math.round(c.rows * dense * rnd(0.85, 1.15)))) : 3;
       var d = 0.44;
       var iw = w - 2 * d, ih = h - 2 * d;
       var nrm = new THREE.Vector3(0, 0, 1).applyQuaternion(q).normalize();
@@ -165,6 +171,18 @@
 
     var b = new THREE.Box3().setFromObject(group);
     var height = b.max.y - b.min.y || 3;
+
+    /* rotacion aleatoria de TODA la figura (0/90/180/270): misma estructura,
+       aspecto completamente distinto segun la semilla del nivel */
+    var qRot = new THREE.Quaternion();
+    qRot.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.floor(R() * 4) * Math.PI / 2);
+    if (qRot.w < 0.9999) {
+      for (var ri = 0; ri < slots.length; ri++) {
+        slots[ri].p.applyQuaternion(qRot);
+        slots[ri].n.applyQuaternion(qRot);
+      }
+    }
+    group.quaternion.premultiply(qRot);
 
     return { group: group, slots: slots, plates: plates, height: height };
   }
