@@ -1516,6 +1516,36 @@ function addToBin(sc) {
     renderer.setSize(window.innerWidth, window.innerHeight);
   });
 
+  /* ---------- PWA: registro + boton de instalar ---------- */
+  var instEvt = null;
+  function wireInstall() {
+    var btn = $('btnInstall');
+    if (!btn) return;
+    if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) return;
+    window.addEventListener('beforeinstallprompt', function (e) {
+      e.preventDefault();
+      instEvt = e;
+      btn.classList.remove('hidden');
+    });
+    btn.addEventListener('click', function () {
+      SJaudio.sfx.click();
+      if (!instEvt) { toast('Abre el menu de Chrome (3 puntos) y elige Anadir a pantalla de inicio', 'warn'); return; }
+      instEvt.prompt();
+      instEvt.userChoice.then(function (r) {
+        if (r && r.outcome === 'accepted') { btn.classList.add('hidden'); instEvt = null; }
+      });
+    });
+    window.addEventListener('appinstalled', function () {
+      btn.classList.add('hidden');
+      instEvt = null;
+    });
+  }
+  function registerSW() {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').then(function () {}, function () { /* sin SW: el juego sigue funcionando */ });
+    }
+  }
+
   function boot() {
     migrateOldSave();
     loadDeleted();
@@ -1523,6 +1553,8 @@ function addToBin(sc) {
     save = activeUser();
     initScene();
     wireUI();
+    wireInstall();
+    registerSW();
     renderUserList();
     updateHUD();
     showScreen('menu');

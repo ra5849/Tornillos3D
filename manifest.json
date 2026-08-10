@@ -1,0 +1,16 @@
+{
+  "name": "Tornillos 3D",
+  "short_name": "Tornillos",
+  "description": "Desatornilla, ordena por color y desarma las figuras. 100% gratis, sin anuncios.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#3b4a6e",
+  "theme_color": "#3b4a6e",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
