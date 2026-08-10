@@ -44,7 +44,26 @@
 
   /* ---------- Perfiles de jugador ---------- */
   var PROF_KEY = 'tornillos3d_profiles';
+  var DEL_KEY = 'tornillos3d_deleted';
   var profiles = { active: 'Jugador 1', list: [] };
+  /* nombres borrados: aunque el borrado en la nube falle o llegue tarde,
+     la fusion nunca vuelve a traer a un jugador eliminado */
+  var deletedNames = [];
+  function loadDeleted() {
+    try { deletedNames = JSON.parse(localStorage.getItem(DEL_KEY) || '[]'); } catch (e) { deletedNames = []; }
+    if (!Array.isArray(deletedNames)) deletedNames = [];
+  }
+  function persistDeleted() {
+    try { localStorage.setItem(DEL_KEY, JSON.stringify(deletedNames)); } catch (e) {}
+  }
+  function isDeleted(name) { return deletedNames.indexOf(name) !== -1; }
+  function markDeleted(name) {
+    if (!isDeleted(name)) { deletedNames.push(name); persistDeleted(); }
+  }
+  function unmarkDeleted(name) {
+    var i = deletedNames.indexOf(name);
+    if (i !== -1) { deletedNames.splice(i, 1); persistDeleted(); }
+  }
 
   /* migración del guardado antiguo (una sola partida) al primer perfil */
   function migrateOldSave() {
@@ -109,6 +128,7 @@
       if (!rows || !rows.length) return;
       var changed = false;
       rows.forEach(function (r) {
+        if (isDeleted(r.name)) return;
         var loc = null;
         for (var i = 0; i < profiles.list.length; i++) {
           if (profiles.list[i].name === r.name) { loc = profiles.list[i]; break; }
@@ -168,12 +188,14 @@
       return null;
     }
     profiles.list.push({ name: name, unlocked: 1, coins: 0, stars: {} });
+    unmarkDeleted(name);
     profiles.active = name;
     refreshUserUI();
     toast('Bienvenido, ' + name + '!', 'good');
     return name;
   }
   function deleteUserByName(name) {
+    markDeleted(name);
     profiles.list = profiles.list.filter(function (u) { return u.name !== name; });
     if (window.SJcloud && SJcloud.enabled) SJcloud.remove(name, function () {});
     if (profiles.active === name) profiles.active = profiles.list.length ? profiles.list[0].name : '';
@@ -1496,6 +1518,7 @@ function addToBin(sc) {
 
   function boot() {
     migrateOldSave();
+    loadDeleted();
     loadProfiles();
     save = activeUser();
     initScene();
